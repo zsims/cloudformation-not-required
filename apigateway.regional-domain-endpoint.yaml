@@ -1,0 +1,75 @@
+Parameters:
+  CustomApiGwDomainName:
+    Type: String
+Resources:
+  LookupCustomApiGwDomainLambda:
+    Type: AWS::Lambda::Function
+    Properties: 
+      Code:
+        ZipFile: |
+          import json
+          import cfnresponse
+          import boto3
+          def handler(event, context):
+            try:
+              if event['RequestType'] == 'Delete':
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                  return
+              domainName = event['ResourceProperties']['CustomDomain']
+              print('Looking up %s' % domainName)
+              client = boto3.client('apigateway')
+              domainProperties = client.get_domain_name(domainName=domainName)
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, {
+                'regionalDomainName': domainProperties['regionalDomainName'],
+                'regionalHostedZoneId': domainProperties['regionalHostedZoneId']
+              })
+            except:
+              cfnresponse.send(event, context, cfnresponse.FAILED, {})
+              raise
+      Handler: index.handler
+      Role: !GetAtt LookupCustomApiGwDomainLambdaExecutionRole.Arn
+      Timeout: 30
+      Runtime: python3.6
+
+  LookupCustomApiGwDomainLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - apigateway:GET
+                Resource: "*"
+                
+  CustomRegionalDomainEndpoint:
+    Type: Custom::ApiGwFindCustomRegionalDomain
+    Properties:
+      ServiceToken: !GetAtt LookupCustomApiGwDomainLambda.Arn
+      Region: !Ref AWS::Region
+      CustomDomain: !Ref CustomApiGwDomainName
+
+Outputs:
+  RegionalHostedZoneId:
+    Value: !GetAtt CustomRegionalDomainEndpoint.regionalHostedZoneId
+
+   RegionalDomainName:
+     Value: !GetAtt CustomRegionalDomainEndpoint.regionalDomainName
