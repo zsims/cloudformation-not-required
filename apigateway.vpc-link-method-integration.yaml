@@ -1,0 +1,94 @@
+Parameters:
+  RestApiId:
+    Type: String
+  ResourceId:
+    Type: String
+  VpcConnectionId:
+    Type: String
+  HttpMethod:
+    Type: String
+  IntegrationUri:
+    Type: String
+
+Resources:
+  IntegrationLambda:
+    Type: AWS::Lambda::Function
+    Properties: 
+      Code:
+        ZipFile: |
+          import json
+          import cfnresponse
+          import boto3
+          def handler(event, context):
+            try:
+              client = boto3.client('apigateway')
+              if event['RequestType'] == 'Delete':
+                  restApiId, resourceId, httpMethod = event['PhysicalResourceId'].split(':')
+                  client.delete_integration(
+                    restApiId=restApiId,
+                    resourceId=resourceId,
+                    httpMethod=httpMethod)
+                  cfnresponse.send(event, context, cfnresponse.SUCCESS, {})
+                  return
+              restApiId=event['ResourceProperties']['RestApiId']
+              resourceId=event['ResourceProperties']['ResourceId']
+              httpMethod=event['ResourceProperties']['HttpMethod']
+              client.put_integration(
+                restApiId=restApiId,
+                resourceId=resourceId,
+                type='HTTP_PROXY',
+                connectionType='VPC_LINK',
+                connectionId=event['ResourceProperties']['VpcConnectionId'],
+                httpMethod=httpMethod,
+                integrationHttpMethod=httpMethod,
+                uri=event['ResourceProperties']['IntegrationUri'])
+              cfnresponse.send(event, context, cfnresponse.SUCCESS, {}, '%s:%s:%s' % (restApiId, resourceId, httpMethod))
+            except:
+              cfnresponse.send(event, context, cfnresponse.FAILED, {})
+              raise
+      Handler: index.handler
+      Role: !GetAtt IntegrationLambdaExecutionRole.Arn
+      Timeout: 30
+      Runtime: python3.6
+
+  IntegrationLambdaExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+        - Effect: Allow
+          Principal:
+            Service:
+            - lambda.amazonaws.com
+          Action:
+          - sts:AssumeRole
+      Path: "/"
+      Policies:
+        - PolicyName: root
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - logs:CreateLogGroup
+                  - logs:CreateLogStream
+                  - logs:PutLogEvents
+                Resource: arn:aws:logs:*:*:*
+              - Effect: Allow
+                Action:
+                  - apigateway:GET
+                  - apigateway:POST
+                  - apigateway:PUT
+                Resource: "*"
+
+  MethodVpcIntegration:
+    Type: Custom::ApiGwMethodVpcIntegration
+    Properties:
+      ServiceToken: !GetAtt IntegrationLambda.Arn
+      Region: !Ref AWS::Region
+      RestApiId: !Ref RestApiId
+      ResourceId: !Ref ResourceId
+      VpcConnectionId: !Ref VpcConnectionId
+      HttpMethod: !Ref HttpMethod
+      IntegrationUri: !Ref IntegrationUri
