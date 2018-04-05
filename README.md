@@ -1,6 +1,10 @@
 # CloudFormation Not Required
 Collection of custom resources for things missing from CloudFormation. Leverages AWS built in AWS Lambda and [cfnresponse](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-lambda-function-code.html#cfn-lambda-function-code-cfnresponsemodule) to create custom types that can be used to bridge the gap.
 
+[![forthebadge](https://forthebadge.com/images/badges/uses-badges.svg)](https://forthebadge.com)
+[![forthebadge](https://forthebadge.com/images/badges/thats-how-they-get-you.svg)](https://forthebadge.com)
+[![forthebadge](https://forthebadge.com/images/badges/60-percent-of-the-time-works-every-time.svg)](https://forthebadge.com)
+
 # How to Use These
 The custom resources should ideally be included as sub-stacks as that's the nicest way to pass parameters/re-use templates.
 
