@@ -63,3 +63,46 @@ Resources:
         HttpMethod: 'GET'
         IntegrationUri: !Sub 'http://${MyAlb.DNSName}/{proxy}'
 ```
+
+## Find Custom Domain Regional Domain Endpoint
+As of April 2018, `!GetAtt MyApiGwDomain.DistributionDomainName` isn't yet supported for regional endpoints domains per https://forums.aws.amazon.com/thread.jspa?messageID=795128, nor does CloudFormation `AWS::ApiGateway::DomainName` currently return a [RegionalDomainName attribute](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-resource-apigateway-domainname.html#aws-resource-apigateway-domainname-returnvalues)
+
+Example:
+```
+Resources:
+  MyApiGwCustomDomain:
+    Type: AWS::ApiGateway::DomainName
+    Properties:
+      DomainName: mygw.example.com
+      RegionalCertificateArn: !Ref MyAcmCertificateArn
+      EndpointConfiguration:
+        Types:
+          - REGIONAL
+
+  MyRoute53Record:
+    Type: AWS::Route53::RecordSetGroup
+    Properties:
+      HostedZoneName: 'example.com.'
+      RecordSets:
+        - Name: mygw.example.com
+          Type: A
+          AliasTarget:
+            HostedZoneId: !GetAtt CustomRegionalDomain.RegionalHostedZoneId
+            DNSName: !GetAtt CustomRegionalDomain.RegionalDomainName
+
+  MyApi:
+    Type: AWS::ApiGateway::RestApi
+    Properties:
+      Name: My API
+      Description: My Great API
+      EndpointConfiguration:
+        Types: 
+          - REGIONAL
+
+  CustomRegionalDomain:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      TemplateURL: http://s3.amazonaws.com/cloudformation-not-required/apigateway.regional-domain-endpoint.yaml
+      Parameters:
+        CustomApiGwDomainName: mygw.example.com
+```
