@@ -1,11 +1,12 @@
 # CloudFormation Not Required
-Collection of custom resources for things missing from CloudFormation.
+Collection of custom resources for things missing from CloudFormation. Leverages AWS built in AWS Lambda and [cfnresponse](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-lambda-function-code.html#cfn-lambda-function-code-cfnresponsemodule) to create custom types that can be used to bridge the gap.
 
 # How to Use These
 The custom resources should ideally be included as sub-stacks as that's the nicest way to pass parameters/re-use templates.
 
  1. Upload the snippets
  2. Use a [nested stack for each custom resource you desire](https://docs.aws.amazon.com/AWSCloudFormation/latest/UserGuide/aws-properties-stack.html)
+ 3. Carry on
 
 # API Gateway
 
